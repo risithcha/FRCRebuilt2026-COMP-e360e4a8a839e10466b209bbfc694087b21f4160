@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.Constants.*;
+import frc.robot.LimelightHelpers;
 import frc.robot.statemachine.DrivetrainMode;
 import frc.robot.statemachine.RobotStateMachine;
 import frc.robot.subsystems.drive.CommandSwerveDrivetrain;
@@ -24,11 +25,15 @@ import frc.robot.subsystems.vision.VisionSubsystem;
 /**
  * Command to align the robot to an AprilTag using vision
  *
- * <p>This command: 1. Finds the closest AprilTag (or uses Limelight-detected tag) 2. Calculates
- * target position with optional offset (LEFT/RIGHT/CENTER) 3. Uses PID control to drive the robot
+ * <p>
+ * This command: 1. Finds the closest AprilTag (or uses Limelight-detected tag)
+ * 2. Calculates
+ * target position with optional offset (LEFT/RIGHT/CENTER) 3. Uses PID control
+ * to drive the robot
  * to the target pose 4. Rotates to face opposite the tag (facing the tag)
  *
- * <p>For REBUILT 2026 - Generic AprilTag alignment for any field element
+ * <p>
+ * For REBUILT 2026 - Generic AprilTag alignment for any field element
  */
 public class AlignToAprilTag extends Command {
 
@@ -46,8 +51,8 @@ public class AlignToAprilTag extends Command {
   private final PIDController pidRotate;
 
   // Swerve drive request - field centric with velocity control
-  private final SwerveRequest.FieldCentric driveRequest =
-      new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.Velocity);
+  private final SwerveRequest.FieldCentric driveRequest = new SwerveRequest.FieldCentric()
+      .withDriveRequestType(DriveRequestType.Velocity);
 
   // Stop request
   private final SwerveRequest stop;
@@ -72,8 +77,8 @@ public class AlignToAprilTag extends Command {
   /**
    * Creates a new AlignToAprilTag command
    *
-   * @param drivetrain The swerve drivetrain subsystem
-   * @param vision The vision subsystem
+   * @param drivetrain    The swerve drivetrain subsystem
+   * @param vision        The vision subsystem
    * @param alignPosition LEFT, RIGHT, or CENTER offset from the AprilTag
    */
   public AlignToAprilTag(
@@ -162,7 +167,14 @@ public class AlignToAprilTag extends Command {
     DataLogManager.log("[AlignToAprilTag] Closest tag from odometry: " + targetTagID);
 
     // Check if Limelight sees a valid tag - prefer it over odometry
-    int limelightTagID = vision.getTid();
+    int limelightTagID = 0;
+    for (String name : VisionConstants.LIMELIGHT_NAMES) {
+      int fid = (int) LimelightHelpers.getFiducialID(name);
+      if (fid != 0) {
+        limelightTagID = fid;
+        break;
+      }
+    }
     if (limelightTagID != 0 && AprilTagMaps.aprilTagMap.containsKey(limelightTagID)) {
       targetTagID = limelightTagID;
       DataLogManager.log("[AlignToAprilTag] Using Limelight tag: " + targetTagID);
@@ -215,10 +227,8 @@ public class AlignToAprilTag extends Command {
     targetRotation = MathUtil.angleModulus(targetRotation);
 
     // Rotate the offset from tag-relative to field-relative
-    double rotatedOffsetX =
-        (offsetX * Math.cos(targetRotation)) - (offsetY * Math.sin(targetRotation));
-    double rotatedOffsetY =
-        (offsetX * Math.sin(targetRotation)) + (offsetY * Math.cos(targetRotation));
+    double rotatedOffsetX = (offsetX * Math.cos(targetRotation)) - (offsetY * Math.sin(targetRotation));
+    double rotatedOffsetY = (offsetX * Math.sin(targetRotation)) + (offsetY * Math.cos(targetRotation));
 
     // Calculate final target pose
     targetPose = new Pose2d(
@@ -293,7 +303,7 @@ public class AlignToAprilTag extends Command {
     double velocityYaw = pidRotate.calculate(currentPose.getRotation().getRadians());
     velocityYaw = MathUtil.clamp(velocityYaw, -2.0, 2.0);
 
-    return new double[] {velocityX, velocityY, velocityYaw};
+    return new double[] { velocityX, velocityY, velocityYaw };
   }
 
   /** Calculate distance between two poses */
